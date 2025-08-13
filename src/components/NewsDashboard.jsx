@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ExternalLink, RefreshCw } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
 
 export default function NewsDashboard() {
-  const [query, setQuery] = useState("technology");
+  const [query, setQuery] = useState("");
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [selectedSource, setSelectedSource] = useState(null);
   const pageSize = 12;
-
-  const sourceInfo = {
-    "Example News":
-      "Example News is a fictional news organization providing dummy data for demos. It covers a wide range of topics from technology to finance."
-  };
+  const { logout } = useAuth()
 
   useEffect(() => {
     fetchNews(query, page);
@@ -105,46 +102,45 @@ export default function NewsDashboard() {
               NewsSpark
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xs sm:max-w-full">
-              Type a topic and explore recent headlines across top sources.
+              Truth in every headline
             </p>
           </div>
 
           <form onSubmit={onSearch} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-            {/* Search input full width on mobile */}
             <div className="relative w-full sm:w-auto flex-grow">
               <input
                 id="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="w-full sm:w-72 md:w-96 pl-10 pr-4 py-3 rounded-lg border border-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="w-full sm:w-72 md:w-96 pl-10 pr-4 py-3 sm:h-14 h-12 rounded-lg border border-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                 placeholder="Search topics, e.g. quantum computing"
                 aria-label="Search topics"
                 autoComplete="off"
               />
               <Search
-                className="absolute left-3 top-3.5 text-slate-400"
+                className="absolute left-3 top-4.5 text-slate-400"
                 size={20}
               />
             </div>
 
-            {/* Buttons container: horizontal on mobile */}
             <div className="flex gap-3 justify-end">
               <button
                 type="submit"
-                className="inline-flex items-center justify-center hover:ring-2 hover:ring-sky-600 gap-2 h-12 sm:h-14 px-5 rounded-lg bg-sky-600 text-white font-semibold shadow-md transition"
-              >
-                Explore
-              </button>
-
-              <button
-                type="button"
                 onClick={() => fetchNews(query, page)}
-                title="Refresh"
-                className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-lg border border-slate-400 bg-white shadow-sm transition hover:ring-2 hover:ring-sky-600"
+                title="Search"
+                className="inline-flex items-center bg-black justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-lg border border-slate-400 shadow-sm transition hover:ring-2 hover:ring-sky-600"
                 aria-label="Refresh news"
               >
-                <RefreshCw size={24} strokeWidth={3} className="text-white-700" />
+                <Search size={24} strokeWidth={3} className="text-white-700" />
               </button>
+              <button
+                type="button"
+                onClick={logout}
+                className="inline-flex items-center justify-center gap-2 h-12 sm:h-14 px-5 rounded-lg font-semibold shadow-md transition bg-red-800 text-white hover:ring-2 hover:ring-red-600"
+              >
+                Logout
+              </button>
+
             </div>
           </form>
         </div>
@@ -198,7 +194,7 @@ export default function NewsDashboard() {
                     <a href={a.url} target="blank">
                     <button
                       onClick={() => window.open(a.url, "_blank")}
-                      className="inline-flex items-center gap-1 text-white hover:ring-1 hover:ring-sky-600 focus:outline-none rounded"
+                      className="bg-black inline-flex items-center gap-1 text-white hover:ring-1 hover:ring-sky-600 rounded"
                     >
                         Read <ExternalLink size={14} />
                     </button>
@@ -229,7 +225,7 @@ export default function NewsDashboard() {
               <button
                 onClick={() => setSelectedSource(null)}
                 aria-label="Close article"
-                className="text-white-600 hover:ring-1 hover:ring-sky-600 text-3xl font-semibold leading-none"
+                className="text-white-600 bg-black hover:ring-1 hover:ring-sky-600 text-3xl font-semibold leading-none"
               >
                 &times;
               </button>
