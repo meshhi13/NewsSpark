@@ -11,12 +11,12 @@ export const AuthProvider = ({ children }) => {
   // Use this function to login. Add a different function on the database side to authenticate whether the user exists. 
   const login = async (data) => {
     setUser(data);
-    navigate("/home");
+    navigate("/dashboard");
   };
 
   const logout = () => {
     setUser(null);
-    navigate("/", { replace: true });
+    navigate("/signin", { replace: true });
   };
 
   const value = useMemo(

@@ -7,6 +7,7 @@ import SignIn from './components/SignIn.jsx'
 import { ProtectedRoute } from './components/ProtectedRoute.jsx'
 import { AuthProvider } from './hooks/useAuth'
 import { UnprotectedRoute } from './components/UnprotectedRoute.jsx'
+import SignUp from './components/SignUp.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>    
@@ -14,9 +15,9 @@ createRoot(document.getElementById('root')).render(
       <AuthProvider>
         <Routes>
             {/* <Route path="/" element={<LandingPage />} /> */}
-            <Route path="/signIn" element={<UnprotectedRoute> <SignIn /> </UnprotectedRoute>} />
-            {/* <Route path="/signUp" element={<SignUp />} /> */}
-            <Route path="/home" element={ <ProtectedRoute> <NewsDashboard /> </ProtectedRoute> } />
+            <Route path="/signin" element={<UnprotectedRoute> <SignIn /> </UnprotectedRoute>} />
+            <Route path="/signup" element={<UnprotectedRoute> <SignUp /> </UnprotectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute> <NewsDashboard /> </ProtectedRoute>} />
         </Routes>
         </AuthProvider>
     </BrowserRouter>
