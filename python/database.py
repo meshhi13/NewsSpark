@@ -13,7 +13,9 @@ c.execute('''
         ID INTEGER PRIMARY KEY NOT NULL,
         NAME TEXT NOT NULL,
         EMAIL TEXT NOT NULL,
-        PASSWORD TEXT NOT NULL
+        PASSWORD TEXT NOT NULL,
+        SAVED TEXT NOT NULL
     )
 ''')
 
+conn.commit()

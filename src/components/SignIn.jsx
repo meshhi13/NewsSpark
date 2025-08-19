@@ -8,7 +8,7 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { login }= useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -27,13 +27,13 @@ export default function SignIn() {
       };
       const response = await fetch("http://127.0.0.1:3100/account/signin", requestOptions);
       const data = await response.json();
-      if (data.STATE == 0){
+      if (data.state == 0){
         await login({ email });
       }
-      else if (data.STATE == 1) {
+      else if (data.state == 1) {
         setError("Wrong password")
       }
-      else if (data.STATE == 2) {
+      else if (data.state == 2) {
         setError("Account does not exist, please create one")
       }
     } else {

@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import logo from "../../public/newsSparkIcon-modified.png"; // adjust path as needed
+import logo from "../assets/public/newsSparkIcon-modified.png"; // adjust path as needed
 import { FaLinkedin, FaGithub } from "react-icons/fa";
 
 export default function LandingPage() {

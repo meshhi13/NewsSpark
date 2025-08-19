@@ -1,8 +1,7 @@
 from database import conn
-from enum import Enum
+import json
 
 c = conn.cursor()
-enum = []
 
 # 0 - VALID
 # 1 - WRONG PASSWORD
@@ -28,7 +27,8 @@ def sign_up(name, email, password):
     if row:
         return 3
     else:
-        c.execute(f"INSERT INTO accounts (NAME, EMAIL, PASSWORD) VALUES (?, ?, ?)", (name, email, password))
+        c.execute(f"INSERT INTO accounts (NAME, EMAIL, PASSWORD, SAVED) VALUES (?, ?, ?, ?)", (name, email, password, json.dumps([])))
+        conn.commit()
         return 0
     
 

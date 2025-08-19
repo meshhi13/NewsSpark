@@ -28,10 +28,10 @@ export default function SignUp() {
       };
       const response = await fetch("http://127.0.0.1:3100/account/signup", requestOptions);
       const data = await response.json();
-      if (data.STATE == 0){
+      if (data.state == 0){
         await login({ email });
       }
-      else if (data.STATE == 3) {
+      else if (data.state == 3) {
         setError("Account already exists")
       }
     } else {

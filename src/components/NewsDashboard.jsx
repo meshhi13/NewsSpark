@@ -1,49 +1,90 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ExternalLink, RefreshCw } from "lucide-react";
+import { Search, ExternalLink, Bookmark, BookmarkCheck } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { CircleX } from "lucide-react";
 
 export default function NewsDashboard() {
   const [query, setQuery] = useState("");
   const [articles, setArticles] = useState([]);
+  const [savedArticles, setSavedArticles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [selectedSource, setSelectedSource] = useState(null);
+  const [showSaved, setShowSaved] = useState(false);
   const pageSize = 12;
-  const { logout } = useAuth()
+  const { logout } = useAuth();
 
   useEffect(() => {
     fetchNews(query, page);
   }, []);
 
+  async function setUpSaved() {
+    const email = JSON.parse(localStorage.getItem("user")).email;
+    try {
+      const response = await fetch(`http://127.0.0.1:3100/api/saved/${email}`);
+      if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+      } else {
+        const result = await response.json();
+        setSavedArticles(JSON.parse(result.articles));
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Failed to fetch", err);
+    }
+  }
+
+  async function clearHelper() {
+    const email = JSON.parse(localStorage.getItem("user")).email;
+    setSavedArticles([])
+    await fetch(`http://127.0.0.1:3100/api/saved/clear/${email}`, { method: "POST"})
+  }
+  async function toggleSave(article) {
+    const email = JSON.parse(localStorage.getItem("user")).email;
+    setSavedArticles((prev) => {
+      if (prev.some((a) => a.url === article.url)) {
+        return prev.filter((a) => a.url !== article.url);
+      } else {
+        return [...prev, article];
+      }
+    });
+    const requestOptions = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({"article" : article})
+    };
+    await fetch(`http://127.0.0.1:3100/api/saved/${email}`, requestOptions);
+  }
+
   async function fetchNews(q, p = 1) {
+    setUpSaved()
     setLoading(true);
     setError(null);
-    await new Promise(resolve => setTimeout(resolve, 450));
+    await new Promise((resolve) => setTimeout(resolve, 450));
     try {
       const response = await fetch("http://127.0.0.1:3100/api/news");
-      if (!response.ok){
+      if (!response.ok) {
         throw new Error(`Response status: ${response.status}`);
+      } else {
+        const result = await response.json();
+        setArticles(result.articles);
+        setLoading(false);
       }
-      else {
-        const result = await response.json()
-        setArticles(result.articles)
-        setLoading(false)
-      }
-
-    } catch (err) {   
+    } catch (err) {
       console.error("Failed to fetch, setting dummy data", err);
       const dummyData = {
         articles: Array.from({ length: pageSize }).map((_, i) => ({
           title: `${q} Headline ${i + 1}`,
           source: { name: "Example News" },
           url: "https://example.com/news-article",
-          urlToImage: "https://www.mooreseal.com/wp-content/uploads/2013/11/dummy-image-square.jpg",
+          urlToImage:
+            "https://www.mooreseal.com/wp-content/uploads/2013/11/dummy-image-square.jpg",
           publishedAt: new Date().toISOString(),
           description: `This is a dummy description for ${q} headline ${i + 1}.`,
-          content: `This is dummy content for ${q} headline ${i + 1}.`
-        }))
+          content: `This is dummy content for ${q} headline ${i + 1}.`,
+        })),
       };
       setTimeout(() => {
         setArticles(dummyData.articles);
@@ -65,7 +106,7 @@ export default function NewsDashboard() {
     try {
       return new Intl.DateTimeFormat("en-US", {
         dateStyle: "medium",
-        timeStyle: "short"
+        timeStyle: "short",
       }).format(new Date(iso));
     } catch (e) {
       return iso;
@@ -106,7 +147,10 @@ export default function NewsDashboard() {
             </p>
           </div>
 
-          <form onSubmit={onSearch} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <form
+            onSubmit={onSearch}
+            className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto"
+          >
             <div className="relative w-full sm:w-auto flex-grow">
               <input
                 id="search"
@@ -135,12 +179,18 @@ export default function NewsDashboard() {
               </button>
               <button
                 type="button"
+                onClick={() => setShowSaved(!showSaved)}
+                className="inline-flex items-center justify-center gap-2 h-12 sm:h-14 px-5 rounded-lg font-semibold shadow-md transition bg-sky-800 text-white hover:ring-2 hover:ring-sky-600"
+              >
+                {showSaved ? "Hide Saved" : "View Saved"}
+              </button>
+              <button
+                type="button"
                 onClick={logout}
                 className="inline-flex items-center justify-center gap-2 h-12 sm:h-14 px-5 rounded-lg font-semibold shadow-md transition bg-red-800 text-white hover:ring-2 hover:ring-red-600"
               >
                 Logout
               </button>
-
             </div>
           </form>
         </div>
@@ -155,56 +205,133 @@ export default function NewsDashboard() {
           </div>
         )}
 
-        <section className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {articles.map((a, idx) => (
-            <motion.article
-              key={idx}
-              layout
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              whileHover={{ scale: 1.02 }}
-              className="flex flex-col bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-md"
-            >
-              <div className="h-40 sm:h-44 md:h-48 bg-slate-100 relative">
-                <img
-                  src={a.urlToImage}
-                  alt={a.title}
-                  className="object-cover w-full h-full"
-                  loading="lazy"
-                />
-              </div>
-
-              <div className="p-4 flex-1 flex flex-col">
-                <a
-                  onClick={() => setSelectedSource(a.source.name)}
-                  aria-label={`Read more from ${a.source.name}`}
-                  className="no-underline hover:underline cursor-pointer"
-
-                >
-                  <h3 className="text-base sm:text-lg font-semibold text-slate-800 line-clamp-2">
-                    {a.title}
-                  </h3>
-                </a>
-                <p className="text-sm text-slate-500 mt-2 line-clamp-3 flex-1">
-                  {a.description}
-                </p>
-
-                <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
-                  <div>{fmtDate(a.publishedAt)}</div>
-                    <a href={a.url} target="blank">
-                    <button
-                      onClick={() => window.open(a.url, "_blank")}
-                      className="bg-black inline-flex items-center gap-1 text-white hover:ring-1 hover:ring-sky-600 rounded"
-                    >
-                        Read <ExternalLink size={14} />
-                    </button>
-                    </a>
+        {/* News Grid */}
+        {!showSaved && (
+          <section className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {articles.map((a, idx) => (
+              <motion.article
+                key={idx}
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ scale: 1.02 }}
+                className="flex flex-col bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-md"
+              >
+                <div className="h-40 sm:h-44 md:h-48 bg-slate-100 relative">
+                  <img
+                    src={a.urlToImage}
+                    alt={a.title}
+                    className="object-cover w-full h-full"
+                    loading="lazy"
+                  />
                 </div>
+
+                <div className="p-4 flex-1 flex flex-col">
+                  <a
+                    onClick={() => setSelectedSource(a.source.name)}
+                    aria-label={`Read more from ${a.source.name}`}
+                    className="no-underline hover:underline cursor-pointer"
+                  >
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-800 line-clamp-2">
+                      {a.title}
+                    </h3>
+                  </a>
+                  <p className="text-sm text-slate-500 mt-2 line-clamp-3 flex-1">
+                    {a.description}
+                  </p>
+
+                  <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
+                    <div>{fmtDate(a.publishedAt)}</div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => toggleSave(a)}
+                        className="bg-sky-600 text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-sky-700"
+                      >
+                        {savedArticles.some((s) => s.url === a.url) ? (
+                          <>
+                            <BookmarkCheck size={14} /> Saved
+                          </>
+                        ) : (
+                          <>
+                            <Bookmark size={14} /> Save
+                          </>
+                        )}
+                      </button>
+                      <a href={a.url} target="blank">
+                        <button className="bg-black inline-flex items-center gap-1 text-white hover:ring-1 hover:ring-sky-600 rounded px-2 py-1">
+                          Read <ExternalLink size={14} />
+                        </button>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </motion.article>
+            ))}
+          </section>
+        )}
+
+        {/* Saved Posts */}
+        {showSaved && (
+          <section className="mt-6">
+            <div className="flex items-center justify-left mb-4">
+              <h2 className="text-xl font-bold text-white-700">
+                Saved Posts
+              </h2>
+              <button
+                type="button"
+                onClick={() => clearHelper()}
+                className="inline-flex items-center ml-4 justify-center gap-2 h-10 sm:h-10 px-5 rounded-lg font-semibold shadow-md transition bg-red-800 text-white hover:ring-2 hover:ring-red-600"
+              >
+                Clear
+              </button>
+            </div>
+            {savedArticles.length === 0 ? (
+              <div className="p-6 rounded-lg border border-dashed border-slate-300 text-white text-center">
+                No saved posts yet.
               </div>
-            </motion.article>
-          ))}
-        </section>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {savedArticles.map((a, idx) => (
+                  <motion.article
+                    key={idx}
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-md"
+                  >
+                    <div className="h-40 sm:h-44 md:h-48 bg-slate-100 relative">
+                      <img
+                        src={a.urlToImage}
+                        alt={a.title}
+                        className="object-cover w-full h-full"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div className="p-4 flex-1 flex flex-col">
+                      <h3 className="text-base sm:text-lg font-semibold text-slate-800 line-clamp-2">
+                        {a.title}
+                      </h3>
+                      <p className="text-sm text-slate-500 mt-2 line-clamp-3 flex-1">
+                        {a.description}
+                      </p>
+                      <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
+                        <div>{fmtDate(a.publishedAt)}</div>
+                        <a href={a.url} target="blank">
+                          <button className="bg-black inline-flex items-center gap-1 text-white hover:ring-1 hover:ring-sky-600 rounded px-2 py-1">
+                            Read <ExternalLink size={14} />
+                          </button>
+                        </a>
+                      </div>
+                    </div>
+                  </motion.article>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </main>
+
+      {/* Expanded Source Overlay */}
       <AnimatePresence>
         {selectedSource && (
           <motion.div
@@ -215,13 +342,15 @@ export default function NewsDashboard() {
             exit={{ opacity: 0, scale: 0.8, borderRadius: 24 }}
             transition={{
               duration: 0.3,
-              ease: [0.4, 0, 0.2, 1]
+              ease: [0.4, 0, 0.2, 1],
             }}
             className="fixed inset-0 bg-white z-50 overflow-y-auto overscroll-none flex flex-col max-w-4xl mx-auto my-8 rounded-lg shadow-lg"
             style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}
           >
             <header className="sticky top-0 bg-white border-b border-gray-200 z-10 flex items-center justify-between p-4">
-              <h2 className="text-3xl font-bold text-gray-900">{selectedSource}</h2>
+              <h2 className="text-3xl font-bold text-gray-900">
+                {selectedSource}
+              </h2>
               <button
                 onClick={() => setSelectedSource(null)}
                 aria-label="Close article"
@@ -232,28 +361,36 @@ export default function NewsDashboard() {
             </header>
 
             <article className="px-6 py-8 prose prose-lg max-w-none text-gray-900 flex-grow">
-              <h1 className="mb-4">{articles.find(a => a.source.name === selectedSource)?.title || "Article Title"}</h1>
+              <h1 className="mb-4">
+                {articles.find((a) => a.source.name === selectedSource)?.title ||
+                  "Article Title"}
+              </h1>
               <div className="mb-6 text-sm text-gray-500">
-                By <span className="italic">Author Name</span> &middot; {fmtDate(articles.find(a => a.source.name === selectedSource)?.publishedAt) || ""}
+                By <span className="italic">Author Name</span> &middot;{" "}
+                {fmtDate(
+                  articles.find((a) => a.source.name === selectedSource)
+                    ?.publishedAt
+                ) || ""}
               </div>
               <img
-                src={articles.find(a => a.source.name === selectedSource)?.urlToImage}
+                src={
+                  articles.find((a) => a.source.name === selectedSource)
+                    ?.urlToImage
+                }
                 alt="Article Main"
                 className="w-full rounded-lg mb-6 object-cover max-h-96"
               />
               <p>
-                {articles.find(a => a.source.name === selectedSource)?.description ||
-                  "No article description available."}
+                {articles.find((a) => a.source.name === selectedSource)
+                  ?.description || "No article description available."}
               </p>
-              <br></br>
+              <br />
               <p>
-                {articles.find(a => a.source.name === selectedSource)?.content || 
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur suscipit ultrices purus, nec tempor erat convallis vitae. Suspendisse potenti. Nullam non justo ut nisl blandit aliquam. Phasellus in cursus orci. Sed hendrerit laoreet urna, ac laoreet elit."}
+                {articles.find((a) => a.source.name === selectedSource)
+                  ?.content ||
+                  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur suscipit ultrices purus, nec tempor erat convallis vitae. Suspendisse potenti. Nullam non justo ut nisl blandit aliquam. Phasellus in cursus orci. Sed hendrerit laoreet urna, ac laoreet elit."}
               </p>
             </article>
-
-            <footer className="sticky bottom-0 bg-white border-t border-gray-200 p-4 flex justify-start">
-            </footer>
           </motion.div>
         )}
       </AnimatePresence>
