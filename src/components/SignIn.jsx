@@ -25,7 +25,10 @@ export default function SignIn() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: email, password: password })
       };
-      const response = await fetch("http://127.0.0.1:3100/account/signin", requestOptions);
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/account/signin`,
+        requestOptions
+      );
       const data = await response.json();
       if (data.state == 0){
         await login({ email });

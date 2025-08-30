@@ -2,7 +2,12 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ExternalLink, Bookmark, BookmarkCheck } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import { CircleX } from "lucide-react";
+
+function stripHtml(html) {
+  if (!html) return "";
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return doc.body.textContent || "";
+}
 
 export default function NewsDashboard() {
   const [query, setQuery] = useState("");
@@ -23,7 +28,9 @@ export default function NewsDashboard() {
   async function setUpSaved() {
     const email = JSON.parse(localStorage.getItem("user")).email;
     try {
-      const response = await fetch(`http://127.0.0.1:3100/api/saved/${email}`);
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/saved/${email}`
+      );
       if (!response.ok) {
         throw new Error(`Response status: ${response.status}`);
       } else {
@@ -39,7 +46,9 @@ export default function NewsDashboard() {
   async function clearHelper() {
     const email = JSON.parse(localStorage.getItem("user")).email;
     setSavedArticles([])
-    await fetch(`http://127.0.0.1:3100/api/saved/clear/${email}`, { method: "POST"})
+    await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/saved/clear/${email}`, {
+      method: "POST",
+    });
   }
   async function toggleSave(article) {
     const email = JSON.parse(localStorage.getItem("user")).email;
@@ -51,25 +60,36 @@ export default function NewsDashboard() {
       }
     });
     const requestOptions = {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({"article" : article})
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ article: article }),
     };
-    await fetch(`http://127.0.0.1:3100/api/saved/${email}`, requestOptions);
+    await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/saved/${email}`, requestOptions);
   }
 
   async function fetchNews(q, p = 1) {
-    setUpSaved()
+    setUpSaved();
     setLoading(true);
     setError(null);
     await new Promise((resolve) => setTimeout(resolve, 450));
     try {
-      const response = await fetch("http://127.0.0.1:3100/api/news");
+        const searchQuery = q || "general";
+        const response = await fetch(
+        `https://newsapi.org/v2/everything?language=en&q=${encodeURIComponent(
+          searchQuery
+        )}&sortBy=relevancy&pageSize=48&apiKey=${
+          import.meta.env.VITE_NEWS_API_KEY
+        }`
+      );
       if (!response.ok) {
         throw new Error(`Response status: ${response.status}`);
       } else {
         const result = await response.json();
-        setArticles(result.articles);
+        const filteredArticles = result.articles.filter(
+          (article) => article.urlToImage && article.title
+        );
+        const uniqueArray = [...new Set(filteredArticles)];
+        setArticles(uniqueArray);
         setLoading(false);
       }
     } catch (err) {
@@ -228,7 +248,7 @@ export default function NewsDashboard() {
 
                 <div className="p-4 flex-1 flex flex-col">
                   <a
-                    onClick={() => setSelectedSource(a.source.name)}
+                    onClick={() => {setSelectedSource(a.title);}}
                     aria-label={`Read more from ${a.source.name}`}
                     className="no-underline hover:underline cursor-pointer"
                   >
@@ -237,7 +257,7 @@ export default function NewsDashboard() {
                     </h3>
                   </a>
                   <p className="text-sm text-slate-500 mt-2 line-clamp-3 flex-1">
-                    {a.description}
+                    {stripHtml(a.description)}
                   </p>
 
                   <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
@@ -312,7 +332,7 @@ export default function NewsDashboard() {
                         {a.title}
                       </h3>
                       <p className="text-sm text-slate-500 mt-2 line-clamp-3 flex-1">
-                        {a.description}
+                        {stripHtml(a.description)}
                       </p>
                       <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
                         <div>{fmtDate(a.publishedAt)}</div>
@@ -349,7 +369,7 @@ export default function NewsDashboard() {
           >
             <header className="sticky top-0 bg-white border-b border-gray-200 z-10 flex items-center justify-between p-4">
               <h2 className="text-3xl font-bold text-gray-900">
-                {selectedSource}
+                {articles.find((a) => a.title === selectedSource)?.source.name}
               </h2>
               <button
                 onClick={() => setSelectedSource(null)}
@@ -362,33 +382,28 @@ export default function NewsDashboard() {
 
             <article className="px-6 py-8 prose prose-lg max-w-none text-gray-900 flex-grow">
               <h1 className="mb-4">
-                {articles.find((a) => a.source.name === selectedSource)?.title ||
+                {articles.find((a) => a.title === selectedSource)?.title ||
                   "Article Title"}
               </h1>
               <div className="mb-6 text-sm text-gray-500">
                 By <span className="italic">Author Name</span> &middot;{" "}
                 {fmtDate(
-                  articles.find((a) => a.source.name === selectedSource)
+                  articles.find((a) => a.title === selectedSource)
                     ?.publishedAt
                 ) || ""}
               </div>
               <img
                 src={
-                  articles.find((a) => a.source.name === selectedSource)
+                  articles.find((a) => a.title === selectedSource)
                     ?.urlToImage
                 }
                 alt="Article Main"
                 className="w-full rounded-lg mb-6 object-cover max-h-96"
               />
-              <p>
-                {articles.find((a) => a.source.name === selectedSource)
-                  ?.description || "No article description available."}
-              </p>
               <br />
               <p>
-                {articles.find((a) => a.source.name === selectedSource)
-                  ?.content ||
-                  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur suscipit ultrices purus, nec tempor erat convallis vitae. Suspendisse potenti. Nullam non justo ut nisl blandit aliquam. Phasellus in cursus orci. Sed hendrerit laoreet urna, ac laoreet elit."}
+                {stripHtml(articles.find((a) => a.title === selectedSource)
+                  ?.content) || "No article content available."}
               </p>
             </article>
           </motion.div>
